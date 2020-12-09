@@ -14,6 +14,7 @@ class GameScene: SKScene {
     
     var background = SKSpriteNode()
     var spike = SKSpriteNode()
+    var floor = SKSpriteNode()
     
     override func didMove(to view: SKView) {
         // recall a SKView can show one or more SKScenes
@@ -39,7 +40,18 @@ class GameScene: SKScene {
         // add spike
         spike = SKSpriteNode(imageNamed: "spike")
         spike.size = CGSize(width: 225, height: 200)
+        // we want spike to "fall" according to "gravity"
+        // our scene already has a "physics world"
+        // spike and other nodes need a physics body that other nodes's physics bodies interact it
+        spike.physicsBody = SKPhysicsBody(circleOfRadius: CGFloat(spike.size.height / 2))
         addChild(spike)
+        
+        // we need a "floor" so spike doesn't fall to oblivion
+        floor = SKSpriteNode(color: .blue, size: CGSize(width: self.frame.width, height: 100.0))
+        floor.position = CGPoint(x: self.frame.midX, y: self.frame.minY + floor.size.height / 2)
+        floor.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: floor.size.width, height: floor.size.height))
+        floor.physicsBody?.isDynamic = false // so our floor doesn't move
+        addChild(floor)
     }
 
     
