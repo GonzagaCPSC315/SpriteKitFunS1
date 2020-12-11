@@ -17,6 +17,8 @@ class GameScene: SKScene {
     var floor = SKSpriteNode()
     var ceiling = SKSpriteNode()
     
+    var timer: Timer? = nil
+    
     override func didMove(to view: SKView) {
         // recall a SKView can show one or more SKScenes
         // this method is like viewDidLoad()
@@ -62,8 +64,41 @@ class GameScene: SKScene {
         addChild(ceiling)
         
         // task: set up a timer so that every 3 seconds we add a flying basketball
+        timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true, block: { (timer) in
+            self.addBall()
+        })
     }
 
+    func addBall() {
+        // game plan
+        // 1. create a sprite for a ball
+        // 2. animate the ball so it flies across the screen right to left
+        // 3. animate the ball so it rotates as it flies
+        // 4. setup contacts and collisions for spike, the balls, the floor/ceiling
+        // 5. add the footballs
+        
+        // 1. create a sprite for a ball
+        let ball = SKSpriteNode(imageNamed: "basketball")
+        ball.size = CGSize(width: 125, height: 125)
+        // position x: ball starts off screen to the right y: random Y coordinate that is valid (e.g. doesn't overlap with floor or ceiling)
+        let minRandY = Int(self.frame.minY + floor.size.height + ball.size.height / 2)
+        let maxRandY = Int(self.frame.maxY - ceiling.size.height - ball.size.height / 2)
+        let randY = CGFloat(Int.random(in: minRandY...maxRandY)) // TODO: fix this to be random
+        ball.position = CGPoint(x: self.frame.maxX + ball.size.width / 2, y: randY)
+        ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2)
+        ball.physicsBody?.affectedByGravity = false
+        
+        // 2. animate the ball so it flies across the screen right to left
+        // use SKAction to animate a node
+        let moveLeft = SKAction.move(to: CGPoint(x: self.frame.minX - ball.size.width / 2, y: randY), duration: 2)
+        // then remove the ball from the scene when it is off screen
+        let removeBall = SKAction.removeFromParent()
+        // put the two actions together in a sequence
+        let flyAnimation = SKAction.sequence([moveLeft, removeBall])
+        ball.run(flyAnimation)
+        
+        addChild(ball)
+    }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         // when the user taps the screen, apply an impulse to send spike up
