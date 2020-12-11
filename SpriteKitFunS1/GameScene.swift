@@ -97,6 +97,14 @@ class GameScene: SKScene {
         let flyAnimation = SKAction.sequence([moveLeft, removeBall])
         ball.run(flyAnimation)
         
+        // 3. animate the ball so it rotates as it flies
+        let rotateBall = SKAction.rotate(byAngle: 2 * CGFloat.pi, duration: 1)
+        let rotateBallForever = SKAction.repeatForever(rotateBall)
+        ball.run(rotateBallForever)
+        
+        // 4. setup contacts and collisions for spike, the balls, the floor/ceiling
+        
+        
         addChild(ball)
     }
     
