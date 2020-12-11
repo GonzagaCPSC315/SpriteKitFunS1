@@ -16,6 +16,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var spike = SKSpriteNode()
     var floor = SKSpriteNode()
     var ceiling = SKSpriteNode()
+    var play = SKSpriteNode()
     
     var scoreLabel = SKLabelNode()
     var score = 0 {
@@ -25,6 +26,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     var timer: Timer? = nil
+    var counter = 0
     
     enum NodeCategory: UInt32 {
         // each sprite needs a "category" that is a unique
@@ -49,7 +51,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         print("minX: \(self.frame.minX) maxX: \(self.frame.maxX)")
         print("minY: \(self.frame.minY) maxY: \(self.frame.maxY)")
         print("midX: \(self.frame.midX) midY: \(self.frame.midY)")
-        
+                
+        startGame()
+    }
+    
+    func setupInitialNodes() {
         // add our background image as a sprite
         background = SKSpriteNode(imageNamed: "court")
         // set the background's size to be the same as the scene's frame
@@ -58,7 +64,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         background.zPosition = -1 // default 0
         // add the background to the scene with addChild()
         addChild(background)
-        
+
         // add spike
         spike = SKSpriteNode(imageNamed: "spike")
         spike.size = CGSize(width: 225, height: 200)
@@ -95,13 +101,30 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         score = 0 // force an update of the label
         addChild(scoreLabel)
         
+        // setup our play again sprite
+        play = SKSpriteNode(imageNamed: "play")
+        play.size = CGSize(width: 200, height: 200)
+        play.zPosition = 1
+        play.isHidden = true
+        addChild(play)
+    }
+    
+    func setupTimer() {
         // task: set up a timer so that every 3 seconds we add a flying basketball
         timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true, block: { (timer) in
-            self.addBall()
+            // every 3rd ball will be a football
+            self.counter += 1
+            if self.counter == 3 {
+                self.addBall(name: "football")
+                self.counter = 0
+            }
+            else {
+                self.addBall(name: "basketball")
+            }
         })
     }
 
-    func addBall() {
+    func addBall(name: String) {
         // game plan
         // 1. create a sprite for a ball
         // 2. animate the ball so it flies across the screen right to left
@@ -110,7 +133,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // 5. add the footballs
         
         // 1. create a sprite for a ball
-        let ball = SKSpriteNode(imageNamed: "basketball")
+        let ball = SKSpriteNode(imageNamed: name)
         ball.size = CGSize(width: 125, height: 125)
         // position x: ball starts off screen to the right y: random Y coordinate that is valid (e.g. doesn't overlap with floor or ceiling)
         let minRandY = Int(self.frame.minY + floor.size.height + ball.size.height / 2)
@@ -118,8 +141,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let randY = CGFloat(Int.random(in: minRandY...maxRandY)) // TODO: fix this to be random
         ball.position = CGPoint(x: self.frame.maxX + ball.size.width / 2, y: randY)
         ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2)
-        ball.physicsBody?.affectedByGravity = false
-        ball.physicsBody?.categoryBitMask = NodeCategory.basketball.rawValue
+        if name == "basketball" {
+            ball.physicsBody?.categoryBitMask = NodeCategory.basketball.rawValue
+        }
+        else {
+            // football
+            ball.physicsBody?.categoryBitMask = NodeCategory.football.rawValue
+        }
         ball.physicsBody?.contactTestBitMask = NodeCategory.spike.rawValue
         
         // 2. animate the ball so it flies across the screen right to left
@@ -155,15 +183,44 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             // add a score label and add one when spike catches a ball
             score += 1
             // add footballs (task 5)
-            // when spike catches a football, add game over logic
-            // pause the game, invalidate the timer, show the play again sprite, when the user taps the screen, reset the game
+            let ballBounceSound = SKAction.playSoundFileNamed("bounce.mp3", waitForCompletion: false)
+            spike.run(ballBounceSound)
+        }
+        // when spike catches a football, add game over logic
+        // pause the game, invalidate the timer, show the play again sprite, when the user taps the screen, reset the game
+        // add sound for when spike catches the balls
+        if contact.bodyA.categoryBitMask == NodeCategory.football.rawValue || contact.bodyB.categoryBitMask == NodeCategory.football.rawValue {
+            print("spike has come into contact with a football")
+            // it's game over!!
+            gameOver()
         }
     }
     
+    func startGame() {
+        self.removeAllChildren()
+        setupInitialNodes()
+        isPaused = false
+        setupTimer()
+    }
+    
+    func gameOver() {
+        self.isPaused = true
+        timer?.invalidate()
+        timer = nil
+        // show our play again sprite
+        play.isHidden = false
+    }
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        // when the user taps the screen, apply an impulse to send spike up
-        spike.physicsBody?.applyImpulse(CGVector(dx: 0, dy: 500))
-        // task: add a ceiling so spike cannot fly off the top of the screen
+        if self.isPaused == true {
+            // the user tapped to start a new game
+            startGame()
+        }
+        else {
+            // when the user taps the screen, apply an impulse to send spike up
+            spike.physicsBody?.applyImpulse(CGVector(dx: 0, dy: 500))
+            // task: add a ceiling so spike cannot fly off the top of the screen
+        }
     }
     
     
